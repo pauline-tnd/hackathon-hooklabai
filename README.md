@@ -113,104 +113,82 @@ hackathon-hooklabai/
 
 ---
 
-## 🔧 Setup Instructions
+## ⚡ Quick Start (How to Run)
 
-### Prerequisites
-- Node.js 18+
-- Foundry ([install](https://book.getfoundry.sh/getting-started/installation))
-- Supabase account
-- Neynar API key
-- Eigen AI + Gemini API keys
-- Base wallet with testnet ETH
+Follow these steps to get the project running in minutes.
 
-### 1. Clone Repository
+### 0. Install Prerequisites (Node.js & Foundry)
+
+First, ensure you have the correct version of Node.js installed. We recommend using `nvm`:
+
 ```bash
-git clone <repo-url>
-cd hackathon-hooklabai
+# 1. Install nvm (Node Version Manager)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+source ~/.bashrc
+
+# 2. Install Node.js 18
+nvm install 18
+nvm use 18
+
+# 3. Install Foundry (for Smart Contracts)
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
 ```
 
-### 2. Smart Contract Setup
+### 1. Clone & Install Dependencies
+
+```bash
+git clone https://github.com/danielnoveno/hackathon-hooklabai.git
+cd hackathon-hooklabai
+
+# Install Frontend Dependencies
+cd frontend
+npm install
+cd ..
+```
+
+### 2. Smart Contract Setup (Base Sepolia)
+
 ```bash
 # Install dependencies
 forge install
 
-# Build contracts
-forge build
-
-# Run tests
-forge test -vvv
-
-# Deploy to Base (testnet or mainnet)
+# Create .env file
 cp .env.example .env
-# Fill in PRIVATE_KEY, BASE_RPC_URL, ETHERSCAN_API_KEY
-forge script script/Deploy.s.sol --rpc-url $BASE_RPC_URL --broadcast --verify
+
+# Deploy to Testnet (requires private key with Sepolia ETH)
+# Update .env with your PRIVATE_KEY first
+forge script script/Deploy.s.sol --rpc-url https://sepolia.base.org --broadcast
 ```
 
-### 3. Supabase Setup
-1. Create a new Supabase project
-2. Run the following SQL in the SQL Editor:
+*Copy the deployed contract address from the output!*
 
-```sql
--- Users table
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  wallet_address TEXT UNIQUE NOT NULL,
-  is_premium BOOLEAN DEFAULT FALSE,
-  premium_expiry TIMESTAMP,
-  created_at TIMESTAMP DEFAULT NOW()
-);
+### 3. Database & Environment Setup
 
--- Quotas table
-CREATE TABLE quotas (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  wallet_address TEXT UNIQUE NOT NULL,
-  remaining_credits INTEGER DEFAULT 5,
-  updated_at TIMESTAMP DEFAULT NOW()
-);
+1. Create a project at [Supabase](https://supabase.com).
+2. Run the SQL from `supabase-schema.sql` in the Supabase SQL Editor.
+3. Configure the frontend:
 
--- Usage logs table
-CREATE TABLE usage_logs (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  wallet_address TEXT NOT NULL,
-  topic TEXT,
-  selected_hook TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-3. Copy your Supabase URL and anon key
-
-### 4. Frontend Setup
 ```bash
 cd frontend
-
-# Install dependencies
-npm install
-
-# Create environment file
 cp .env.example .env.local
+```
 
-# Fill in environment variables:
-# NEXT_PUBLIC_CHAIN_ID=8453
-# NEXT_PUBLIC_CONTRACT_ADDRESS=0x... (from deployment)
-# SUPABASE_URL=https://...
-# SUPABASE_ANON_KEY=...
-# NEYNAR_API_KEY=...
-# EIGEN_AI_API_KEY=...
-# GEMINI_API_KEY=...
+Edit `.env.local` and add your keys:
+- `NEXT_PUBLIC_CONTRACT_ADDRESS`: (From Step 2)
+- `NEXT_PUBLIC_SUPABASE_URL`: (From Supabase)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: (From Supabase)
 
-# Run development server
+### 4. Run the Application
+
+```bash
+cd frontend
 npm run dev
 ```
 
-### 5. Test End-to-End
-1. Open http://localhost:3000
-2. Connect wallet
-3. Choose a topic
-4. Select a hook
-5. Verify quota deduction
-6. View full content
-7. Test Warpcast deep link
+Open **http://localhost:3000** in your browser.
+
+> 📘 **Detailed Guide**: For a complete deep-dive into every configuration option, see [SETUP.md](./SETUP.md).
 
 ---
 
