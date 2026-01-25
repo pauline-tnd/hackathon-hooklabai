@@ -89,7 +89,7 @@ contract HookLabSubscriptionTest is Test {
     
     // ============ Premium Status Tests ============
     
-    function test_IsPremium_ReturnsFalseForNonSubscriber() public {
+    function test_IsPremium_ReturnsFalseForNonSubscriber() public view {
         assertFalse(subscription.isPremium(user1));
     }
     
@@ -126,7 +126,7 @@ contract HookLabSubscriptionTest is Test {
     
     // ============ Expiry Tests ============
     
-    function test_GetExpiry_ReturnsZeroForNonSubscriber() public {
+    function test_GetExpiry_ReturnsZeroForNonSubscriber() public view {
         assertEq(subscription.getExpiry(user1), 0);
     }
     
