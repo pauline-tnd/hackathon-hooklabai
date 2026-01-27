@@ -2,15 +2,19 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
-    // PERBAIKAN: Hapus 'src/' karena folder kamu langsung 'app'
-    "./app/**/*.{js,ts,jsx,tsx,mdx}", 
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
+      colors: {
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+      },
       fontFamily: {
-        roboto: ['var(--font-roboto)'],
-        poppins: ['var(--font-poppins)'],
+        roboto: ['var(--font-roboto)', 'sans-serif'],
+        poppins: ['var(--font-poppins)', 'sans-serif'],
       },
     },
   },

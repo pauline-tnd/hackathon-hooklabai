@@ -5,7 +5,6 @@ import WalletConnectComponent from './WalletConnect';
 
 export default function BottomInputCard() {
   return (
-    // PERBAIKAN: Pastikan 'bg-white' ada dan z-index tinggi agar tidak tertutup background
     <div className="w-full bg-white rounded-[20px] p-5 relative z-30 shadow-lg min-h-[140px] flex flex-col justify-between">
       
       {/* Teks Prompt (Abu-abu & Kecil sesuai desain) */}
