@@ -10,13 +10,15 @@
   },
   "dependencies": {
     "@coinbase/onchainkit": "^1.1.2",
+    "@google/generative-ai": "^0.24.1",
     "@tanstack/react-query": "^5.90.20",
     "next": "16.1.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-hot-toast": "^2.6.0",
+    "three": "^0.160.0",
     "viem": "^2.45.0",
-    "wagmi": "^2.19.5",
-    "three": "^0.160.0"
+    "wagmi": "^2.19.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
