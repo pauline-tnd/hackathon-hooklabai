@@ -7,9 +7,9 @@ type ZoomLevel = 'globe' | 'particles' | 'threads';
 
 // Mock threads data
 const THREADS_DATA = [
-  { 
-    id: 1, 
-    username: 'gabeeinhorn', 
+  {
+    id: 1,
+    username: 'gabeeinhorn',
     avatar: '👤',
     time: '1d',
     content: "Let's have a week, thank you God for the opportunity.",
@@ -17,9 +17,9 @@ const THREADS_DATA = [
     likes: 98,
     verified: true
   },
-  { 
-    id: 2, 
-    username: 'techstartup', 
+  {
+    id: 2,
+    username: 'techstartup',
     avatar: '🚀',
     time: '2h',
     content: "Just launched our new AI product. The future is here! 🎉",
@@ -27,9 +27,9 @@ const THREADS_DATA = [
     likes: 234,
     verified: true
   },
-  { 
-    id: 3, 
-    username: 'creativemind', 
+  {
+    id: 3,
+    username: 'creativemind',
     avatar: '🎨',
     time: '5h',
     content: "Sometimes the best ideas come when you least expect them. Keep creating!",
@@ -37,9 +37,9 @@ const THREADS_DATA = [
     likes: 156,
     verified: false
   },
-  { 
-    id: 4, 
-    username: 'businesspro', 
+  {
+    id: 4,
+    username: 'businesspro',
     avatar: '💼',
     time: '8h',
     content: "Grateful for another successful quarter. Hard work pays off! 💪",
@@ -47,9 +47,9 @@ const THREADS_DATA = [
     likes: 342,
     verified: true
   },
-  { 
-    id: 5, 
-    username: 'traveladdict', 
+  {
+    id: 5,
+    username: 'traveladdict',
     avatar: '✈️',
     time: '12h',
     content: "Just booked my next adventure. Life is too short to stay in one place.",
@@ -57,9 +57,9 @@ const THREADS_DATA = [
     likes: 189,
     verified: false
   },
-  { 
-    id: 6, 
-    username: 'fitnessguru', 
+  {
+    id: 6,
+    username: 'fitnessguru',
     avatar: '💪',
     time: '1d',
     content: "Consistency is key. Another morning, another workout done ✅",
@@ -78,25 +78,25 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const animationIdRef = useRef<number>();
-  
+  const animationIdRef = useRef<number | null>(null);
+
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('globe');
   const [showThreads, setShowThreads] = useState(false);
-  
+
   // Refs for objects
   const globeGroupRef = useRef<THREE.Group | null>(null);
-  
+
   // Interaction state
   const isDraggingRef = useRef(false);
   const previousMouseRef = useRef({ x: 0, y: 0 });
   const rotationVelocityRef = useRef({ x: 0, y: 0 });
   const targetRotationRef = useRef({ x: 0, y: 0 });
   const currentRotationRef = useRef({ x: 0, y: 0 });
-  
+
   // Zoom state - START AT 3
   const targetZoomRef = useRef(3);
   const currentZoomRef = useRef(3);
-  
+
   const particlesPositionsRef = useRef<number[]>([]);
 
   useEffect(() => {
@@ -117,12 +117,12 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
     camera.position.z = 3;
     cameraRef.current = camera;
 
-    const renderer = new THREE.WebGLRenderer({ 
-      antialias: true, 
-      alpha: true 
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true
     });
     rendererRef.current = renderer;
-    
+
     renderer.setSize(currentMount.clientWidth, currentMount.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     currentMount.appendChild(renderer.domElement);
@@ -136,26 +136,26 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
     const particlesGeometry = new THREE.BufferGeometry();
     const particlesPositions: number[] = [];
     const particlesColors: number[] = [];
-    
+
     const particleCount = 5000;
     const phi = Math.PI * (3 - Math.sqrt(5));
-    
+
     for (let i = 0; i < particleCount; i++) {
       const y = 1 - (i / (particleCount - 1)) * 2;
       const radius = Math.sqrt(1 - y * y);
       const theta = phi * i;
-      
+
       const x = Math.cos(theta) * radius;
       const z = Math.sin(theta) * radius;
-      
+
       particlesPositions.push(x * 1.01, y * 1.01, z * 1.01);
-      
+
       const intensity = 0.5 + Math.random() * 0.5;
       particlesColors.push(0.2 * intensity, 0.5 * intensity, 1.0 * intensity);
     }
-    
+
     particlesPositionsRef.current = [...particlesPositions];
-    
+
     particlesGeometry.setAttribute(
       'position',
       new THREE.Float32BufferAttribute(particlesPositions, 3)
@@ -179,12 +179,12 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
 
     // Grid lines
     const gridGroup = new THREE.Group();
-    
+
     for (let i = 0; i < 12; i++) {
       const theta = (i / 12) * Math.PI;
       const radius = Math.sin(theta);
       const y = Math.cos(theta);
-      
+
       const circleGeometry = new THREE.RingGeometry(radius * 0.99, radius * 1.01, 64);
       const circleMaterial = new THREE.MeshBasicMaterial({
         color: 0x3366ff,
@@ -197,7 +197,7 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
       circle.position.y = y;
       gridGroup.add(circle);
     }
-    
+
     for (let i = 0; i < 16; i++) {
       const angle = (i / 16) * Math.PI * 2;
       const curve = new THREE.EllipseCurve(0, 0, 1, 1, 0, Math.PI * 2, false, 0);
@@ -212,7 +212,7 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
       line.rotation.y = angle;
       gridGroup.add(line);
     }
-    
+
     globeGroup.add(gridGroup);
 
     // Glow
@@ -277,23 +277,23 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
       // Animate particles
       const positions = particlesGeometry.attributes.position.array as Float32Array;
       const time = Date.now() * 0.001;
-      
+
       for (let i = 0; i < positions.length; i += 3) {
         const x = particlesPositionsRef.current[i];
         const y = particlesPositionsRef.current[i + 1];
         const z = particlesPositionsRef.current[i + 2];
-        
+
         let dispersion = 0;
         if (currentZoomRef.current < 2.5) {
           dispersion = (2.5 - currentZoomRef.current) * 2;
         }
-        
+
         const wave = Math.sin(time + (i / 3) * 0.1) * 0.02;
         positions[i] = x * (1 + dispersion) + wave;
         positions[i + 1] = y * (1 + dispersion) + wave;
         positions[i + 2] = z * (1 + dispersion) + wave;
       }
-      
+
       particlesGeometry.attributes.position.needsUpdate = true;
 
       renderer.render(scene, camera);
@@ -305,11 +305,11 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      
+
       const delta = e.deltaY * 0.003;
       const newZoom = Math.max(0.5, Math.min(5, targetZoomRef.current + delta));
       targetZoomRef.current = newZoom;
-      
+
       // Update level
       let newLevel: ZoomLevel;
       if (newZoom < 1.5) {
@@ -322,7 +322,7 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
         newLevel = 'globe';
         setShowThreads(false);
       }
-      
+
       if (newLevel !== zoomLevel) {
         setZoomLevel(newLevel);
         onZoomLevelChange?.(newLevel);
@@ -376,17 +376,17 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
       if (animationIdRef.current) {
         cancelAnimationFrame(animationIdRef.current);
       }
-      
+
       currentMount.removeEventListener('wheel', handleWheel);
       currentMount.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('resize', handleResize);
-      
+
       if (currentMount.contains(renderer.domElement)) {
         currentMount.removeChild(renderer.domElement);
       }
-      
+
       renderer.dispose();
       particlesGeometry.dispose();
       particlesMaterial.dispose();
@@ -398,8 +398,8 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
   return (
     <div className="absolute inset-0">
       {/* THREE.js Mount */}
-      <div 
-        ref={mountRef} 
+      <div
+        ref={mountRef}
         className="absolute inset-0 w-full h-full"
         style={{
           touchAction: 'none',
@@ -407,11 +407,11 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
           WebkitUserSelect: 'none',
         }}
       />
-      
+
       {/* Threads Overlay - SCROLLBAR HIDDEN */}
       {showThreads && (
         <div className="absolute inset-0 flex items-start justify-center pt-24 pb-20 pointer-events-none">
-          <div 
+          <div
             className="w-full max-w-[380px] px-4 space-y-3 max-h-[65vh] pointer-events-auto overflow-y-auto custom-scrollbar"
           >
             {THREADS_DATA.map((thread, index) => (
@@ -431,7 +431,7 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
                       </span>
                       {thread.verified && (
                         <svg className="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
                       )}
                     </div>
@@ -440,7 +440,7 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
                     <span className="text-white/50 text-xs">{thread.time}</span>
                     <button className="text-white/50 hover:text-white">
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                       </svg>
                     </button>
                   </div>
@@ -453,21 +453,21 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
                 <div className="flex items-center gap-4">
                   <button className="flex items-center gap-1.5 text-white/60 hover:text-white transition">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
                     <span className="text-xs">{thread.comments}</span>
                   </button>
 
                   <button className="flex items-center gap-1.5 text-white/60 hover:text-red-500 transition">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                     </svg>
                     <span className="text-xs">{thread.likes}</span>
                   </button>
 
                   <button className="flex items-center gap-1.5 text-white/60 hover:text-white transition ml-auto">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                     </svg>
                   </button>
                 </div>
@@ -476,7 +476,7 @@ export default function DomeGlobe({ onZoomLevelChange }: DomeGlobeProps) {
           </div>
         </div>
       )}
-      
+
       {/* Zoom Indicator */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none z-50">
         <div className="bg-black/70 backdrop-blur-md px-4 py-2 rounded-full border border-white/20">

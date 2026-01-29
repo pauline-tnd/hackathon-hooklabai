@@ -18,13 +18,11 @@ type HookResultProps = {
 export default function HookResult({ hook, onTryAnother }: HookResultProps) {
   const [copied, setCopied] = useState(false);
 
-  // Generate hashtags (contoh)
-  const hashtags = ['#Link', '#smile', '#post', '#smile', '#post', '#post', '#happy', '#clear', '#tweet', '#clear', '#tweet'];
+  // Generate hashtags (Dynamic based on topic)
+  const hashtags = [`#${hook.topic.replace(/\s+/g, '')}`, '#Web3', '#HookLab', '#Farcaster'];
 
-  // Full content untuk display (gabungan berulang seperti di desain)
-  const fullContent = `${hook.content}
-
-${hook.content}${hook.content}${hook.content}${hook.content}${hook.content}${hook.content}`;
+  // Full content untuk display
+  const fullContent = hook.content;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(fullContent + '\n\n' + hashtags.join(' '));

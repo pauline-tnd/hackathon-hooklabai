@@ -3,7 +3,7 @@
 // 1. IMPORT WAJIB DI ATAS
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
-import toast from 'react-hot-toast'; 
+import toast from 'react-hot-toast';
 
 // Import Components
 import UIBackground from './components/UIBackground';
@@ -29,16 +29,16 @@ type AppState = 'initial' | 'selecting' | 'result';
 
 export default function Home() {
   const { isConnected, address } = useAccount();
-  
+
   const [prompt, setPrompt] = useState('');
-  const [activeTopic, setActiveTopic] = useState<TopicKey | null>(null);
-  const [credits, setCredits] = useState(5);
+  const [activeTopic, setActiveTopic] = useState<string | null>(null);
+  const [credits, setCredits] = useState(1000);
   const [appState, setAppState] = useState<AppState>('initial');
   const [userName, setUserName] = useState<string>('');
-  
+
   const [generatedHooks, setGeneratedHooks] = useState<Hook[]>([]);
   const [isThinking, setIsThinking] = useState(false);
-  
+
   const [selectedHook, setSelectedHook] = useState<Hook | null>(null);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [pendingHook, setPendingHook] = useState<Hook | null>(null);
@@ -61,9 +61,9 @@ export default function Home() {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          category: activeTopic || 'General', 
-          userPrompt: promptText 
+        body: JSON.stringify({
+          category: activeTopic || 'General',
+          userPrompt: promptText
         }),
       });
 
@@ -75,30 +75,38 @@ export default function Home() {
       const data = await response.json();
 
       if (data.hooks && Array.isArray(data.hooks)) {
-        const formattedHooks: Hook[] = data.hooks.map((content: string, i: number) => ({
-          id: `ai-${Date.now()}-${i}`,
-          username: userName || 'Creator', 
-          topic: activeTopic || 'General', 
-          content: content,
-          preview: content.split('\n')[0] 
-        }));
+        const formattedHooks: Hook[] = data.hooks.map((item: any, i: number) => {
+          const contentText = typeof item === 'string' ? item : item.hook;
 
-        setGeneratedHooks(formattedHooks); 
+          // Logic Teaser: Ambil 7 kata pertama saja
+          const words = contentText.split(/\s+/);
+          const previewText = words.length > 7 ? words.slice(0, 7).join(' ') + '...' : contentText;
+
+          return {
+            id: `ai-${Date.now()}-${i}`,
+            username: userName || 'Creator',
+            topic: activeTopic || 'General',
+            content: contentText,
+            preview: previewText
+          };
+        });
+
+        setGeneratedHooks(formattedHooks);
         setAppState('selecting');
-        
-        toast.dismiss(toastId); 
-        toast.success("Hooks generated successfully!"); 
+
+        toast.dismiss(toastId);
+        toast.success("Hooks generated successfully!");
       } else {
         throw new Error("Invalid data format from AI");
       }
 
     } catch (err) {
       // ✅ FIX: Hapus ': any' dan gunakan casting manual
-      const error = err as Error; 
-      
+      const error = err as Error;
+
       console.error("Generate Error:", error);
       toast.dismiss(toastId);
-      
+
       // Cek pesan error dengan aman
       const errorMessage = error.message || "Unknown error";
 
@@ -110,7 +118,7 @@ export default function Home() {
         toast.error(errorMessage);
       }
     } finally {
-      setIsThinking(false); 
+      setIsThinking(false);
     }
   };
 
@@ -140,7 +148,7 @@ export default function Home() {
       setShowNameModal(false);
     } else {
       setUserName('');
-      setCredits(5);
+      setCredits(1000);
       setShowNameModal(true);
     }
     setIsDataLoaded(true);
@@ -149,7 +157,7 @@ export default function Home() {
   const handleNameSubmit = useCallback((name: string) => {
     if (!address) return;
     setUserName(name);
-    userStorage.saveUserData(address, { name, credits: 5 });
+    userStorage.saveUserData(address, { name, credits: 1000 });
     setShowNameModal(false);
     toast.success(`Welcome, ${name}!`);
   }, [address]);
@@ -160,7 +168,7 @@ export default function Home() {
   const handleSelectHook = useCallback((hook: Hook) => {
     if (credits <= 0) {
       toast.error("You are out of credits!");
-      return;
+      // return; // Dev mode: allow unlimited
     }
     const updatedHook = { ...hook, username: userName || 'Anonymous' };
     setPendingHook(updatedHook);
@@ -198,7 +206,30 @@ export default function Home() {
     setPrompt('');
   }, []);
 
-  const suggestions = ['Holiday', 'Travel', 'Business', 'Tech', 'Lifestyle', 'Finance', 'Health'];
+  // ==========================================
+  // FETCH CATEGORIES (DYNAMIC)
+  // ==========================================
+  const [suggestions, setSuggestions] = useState<{ name: string, prompt: string }[]>([
+    { name: 'General', prompt: 'Write a viral hook about...' },
+    { name: 'Business', prompt: 'Write a contrarian business lesson about...' }
+  ]);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const res = await fetch('/api/categories');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.categories && Array.isArray(data.categories)) {
+            setSuggestions(data.categories);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch categories:", e);
+      }
+    }
+    fetchCategories();
+  }, []);
 
   // ==========================================
   // RENDER UI
@@ -230,9 +261,9 @@ export default function Home() {
                 </div>
                 {/* FIX TAILWIND CLASS */}
                 <div className="relative z-20 w-full px-4 pb-12 mt-auto">
-                   <div className="w-full bg-white rounded-[20px] p-5 shadow-lg min-h-35 flex flex-col justify-between">
-                     <div className="flex items-center"><WalletConnect isConnected={false} /></div>
-                   </div>
+                  <div className="w-full bg-white rounded-[20px] p-5 shadow-lg min-h-35 flex flex-col justify-between">
+                    <div className="flex items-center"><WalletConnect isConnected={false} /></div>
+                  </div>
                 </div>
               </>
             ) : appState === 'selecting' ? (
@@ -255,17 +286,18 @@ export default function Home() {
                     Hello <span className="text-blue-400">{userName || 'there'}</span>, <br /> How can i help you today ?
                   </h1>
                   <div className="flex flex-wrap gap-2 justify-center max-w-[320px]">
-                    {suggestions.map((suggestion, index) => {
-                      const topic = suggestion as TopicKey;
+                    {suggestions.map((item, index) => {
+                      const topic = item.name;
+                      const promo = item.prompt;
                       const isActive = activeTopic === topic;
                       return (
                         <button
                           key={index}
-                          onClick={() => { setActiveTopic(topic); setPrompt(TOPIC_PROMPTS[topic]); }}
+                          onClick={() => { setActiveTopic(topic); setPrompt(promo); }}
                           disabled={isThinking}
                           className={`px-5 py-2 rounded-full text-sm font-medium transition ${isActive ? 'bg-blue-600 text-white' : 'bg-white text-black hover:bg-gray-100'}`}
                         >
-                          {suggestion}
+                          {topic}
                         </button>
                       );
                     })}
@@ -278,13 +310,13 @@ export default function Home() {
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
                         disabled={isThinking}
-                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); }}}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
                         placeholder="What do you want to post about?"
                         className="w-full h-20 resize-none border-none outline-none text-sm text-gray-700 placeholder:text-gray-400 pr-12 disabled:opacity-50"
                       />
                       <button onClick={handleSubmit} disabled={!prompt.trim() || isThinking} className="absolute bottom-2 right-2 w-8 h-8 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 rounded-full flex items-center justify-center transition-colors disabled:cursor-not-allowed">
-                        {isThinking ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>}
+                        {isThinking ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> :
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>}
                       </button>
                     </div>
                     <div className="flex items-center gap-3">
