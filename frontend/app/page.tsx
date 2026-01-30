@@ -18,6 +18,13 @@ import HookResult from './components/HookResult';
 
 import { userStorage } from '../utils/userStorage';
 
+import SplitText from "../components/SplitText";
+import ShinyText from "../components/ShinyText";
+
+const handleAnimationComplete = () => {
+  console.log('All letters have animated!');
+};
+
 type Hook = {
   id: string;
   username: string;
@@ -274,9 +281,35 @@ export default function Home() {
               <>
                 <div className="flex-1 flex flex-col items-center justify-center px-6">
                   <p className="text-white/60 text-sm mb-3 font-medium tracking-wide">HookLab assistant</p>
-                  <h1 className="text-white text-3xl font-bold text-center leading-snug font-poppins">
-                    Please Connect <br /> Wallet, First !
-                  </h1>
+                  <ShinyText
+                    text="Welcome to HookLab!"
+                    className="text-white text-3xl font-bold text-center leading-snug font-poppins mb-4"
+                    speed={2}
+                    delay={0}
+                    color="#b5b5b5"
+                    shineColor="#ffffff"
+                    spread={120}
+                    direction="left"
+                    yoyo={false}
+                    pauseOnHover={false}
+                    disabled={false}
+                  />
+
+                  <SplitText
+                    text="Please Connect Wallet First!"
+                    className="text-white/80 text-xl font-medium text-center font-poppins"
+                    delay={50}
+                    duration={1.0}
+                    ease="power3.out"
+                    splitType="chars"
+                    from={{ opacity: 0, y: 40 }}
+                    to={{ opacity: 1, y: 0 }}
+                    threshold={0.1}
+                    rootMargin="-100px"
+                    textAlign="center"
+                    onLetterAnimationComplete={handleAnimationComplete}
+                  />
+
                 </div>
                 <div className="relative z-20 w-full px-4 pb-12 mt-auto">
                   <div className="w-full bg-white rounded-[20px] p-5 shadow-lg min-h-35 flex flex-col justify-between">
@@ -294,7 +327,12 @@ export default function Home() {
               // UI UTAMA (INPUT)
               <>
                 <div className="pt-12 px-6 flex items-center gap-3">
-                  <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center"><div className="text-white font-bold">HL</div></div>
+                  {/* FIX TAILWIND GRADIENT */}
+                  <div className="relative w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                    <div className="relative w-10 h-10 flex items-center justify-center">
+                      <img src="/logo_hooklab.png" alt="Logo HookLab AI" />
+                    </div>
+                  </div>
                   <span className="text-white font-bold text-xl font-poppins tracking-wide">HookLab AI</span>
                 </div>
                 <div className="flex-1 flex flex-col items-center justify-center px-6 -mt-10">

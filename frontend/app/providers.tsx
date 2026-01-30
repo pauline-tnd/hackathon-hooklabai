@@ -5,6 +5,7 @@ import { baseSepolia, foundry } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { injected, coinbaseWallet } from 'wagmi/connectors';
 import { ReactNode } from 'react';
+import Footer from './components/Footer';
 
 const chains = [baseSepolia, foundry] as const;
 const configuredChainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID);
@@ -43,6 +44,7 @@ export function Providers({ children }: ProvidersProps) {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         {children}
+        <Footer />
       </QueryClientProvider>
     </WagmiProvider>
   );

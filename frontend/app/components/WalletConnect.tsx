@@ -37,7 +37,7 @@ export default function WalletConnect({ isConnected, showModal = false }: Wallet
       ready: c.ready
     })));
 
-    
+
   }, [connectors]);
 
   const handleConnectMetamask = async () => {
@@ -172,7 +172,7 @@ export default function WalletConnect({ isConnected, showModal = false }: Wallet
     );
   }
 
-  
+
 
   // Jika belum connected
   return (
@@ -180,10 +180,21 @@ export default function WalletConnect({ isConnected, showModal = false }: Wallet
       <button
         onClick={() => setShowWalletModal(true)}
         disabled={isConnecting}
-        className="group flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-full transition-all disabled:opacity-50"
+        className="group flex items-center gap-2 px-4 py-2
+        rounded-full
+        bg-white/10 hover:bg-white/20
+        backdrop-blur-md
+        border border-blue-200/50 border-s-blue-200/70 border-e-blue-200/70
+        shadow-xl shadow-blue-500/20
+        transition-all duration-200 ease-out
+        hover:-translate-y-[1px]
+        hover:shadow-xl hover:shadow-blue-500/30
+        hover:border-blue-200/40 hover:border-s-blue-200/60 hover:border-e-blue-200/60
+        active:translate-y-0 active:scale-[0.98]
+        disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <div className="w-2 h-2 rounded-full shrink-0 bg-red-600" />
-        <span className="text-gray-700 text-sm font-bold group-hover:text-black">
+        <span className="bg-gradient-to-r from-gray-600 via-gray-500 to-gray-600 bg-clip-text text-transparent text-sm font-bold group-hover:text-blue-500">
           {isConnecting ? 'Connecting...' : 'Connect Wallet'}
         </span>
       </button>
