@@ -17,6 +17,13 @@ import SplashScreen from './components/SplashScreen';
 import { TOPIC_PROMPTS, type TopicKey } from './config/topicPrompts';
 import { userStorage } from '../utils/userStorage';
 
+import SplitText from "../components/SplitText";
+import ShinyText from "../components/ShinyText";
+
+const handleAnimationComplete = () => {
+  console.log('All letters have animated!');
+};
+
 type Hook = {
   id: string;
   username: string;
@@ -101,7 +108,6 @@ export default function Home() {
       }
 
     } catch (err) {
-      // ✅ FIX: Hapus ': any' dan gunakan casting manual
       const error = err as Error;
 
       console.error("Generate Error:", error);
@@ -260,9 +266,35 @@ export default function Home() {
               <>
                 <div className="flex-1 flex flex-col items-center justify-center px-6">
                   <p className="text-white/60 text-sm mb-3 font-medium tracking-wide">HookLab assistant</p>
-                  <h1 className="text-white text-3xl font-bold text-center leading-snug font-poppins">
-                    Please Connect <br /> Wallet, First !
-                  </h1>
+                  <ShinyText
+                    text="Welcome to HookLab!"
+                    className="text-white text-3xl font-bold text-center leading-snug font-poppins mb-4"
+                    speed={2}
+                    delay={0}
+                    color="#b5b5b5"
+                    shineColor="#ffffff"
+                    spread={120}
+                    direction="left"
+                    yoyo={false}
+                    pauseOnHover={false}
+                    disabled={false}
+                  />
+
+                  <SplitText
+                    text="Please Connect Wallet First!"
+                    className="text-white/80 text-xl font-medium text-center font-poppins"
+                    delay={50}
+                    duration={1.0}
+                    ease="power3.out"
+                    splitType="chars"
+                    from={{ opacity: 0, y: 40 }}
+                    to={{ opacity: 1, y: 0 }}
+                    threshold={0.1}
+                    rootMargin="-100px"
+                    textAlign="center"
+                    onLetterAnimationComplete={handleAnimationComplete}
+                  />
+
                 </div>
                 {/* FIX TAILWIND CLASS */}
                 <div className="relative z-20 w-full px-4 pb-12 mt-auto">

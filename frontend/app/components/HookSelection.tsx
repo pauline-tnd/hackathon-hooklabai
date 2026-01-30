@@ -16,7 +16,7 @@ type HooksSelectionProps = {
   onSelectHook: (hook: Hook) => void;
   onBack: () => void;
   userName: string;
-  generatedHooks : Hook[]; 
+  generatedHooks: Hook[];
 };
 
 function getInitial(name: string) {
@@ -38,7 +38,7 @@ function getAvatarColor(name: string) {
 
 export default function HooksSelection({ onSelectHook, onBack, userName, generatedHooks }: HooksSelectionProps) {
   // Mock data - nanti bisa diganti dengan data dari API
-  const hooks = generatedHooks; 
+  const hooks = generatedHooks;
 
   return (
     <div className="flex-1 flex flex-col bg-black overflow-y-auto">
