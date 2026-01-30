@@ -1,65 +1,78 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { VIRAL_PATTERNS, SYSTEM_INSTRUCTION, BAD_VS_GOOD_EXAMPLES } from "@/app/lib/viralContext";
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 
-// Helper to get top posts from JSON, filtered by category
-function getSmartContext(userCategory: string): string {
+// Helper to get top posts from Supabase, filtered by category
+async function getSmartContext(userCategory: string): Promise<string> {
   try {
-    // 1. Try to read the NEW analyzed data
-    const analyzedPath = "/home/user/hackathon-hooklabai/data/analyzed_posts.json";
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-    // Fallback to old data if new one doesn't exist
-    const rawPath = "/home/user/hackathon-hooklabai/data/posts.json";
-    const dataPath = fs.existsSync(analyzedPath) ? analyzedPath : rawPath;
-
-    if (!fs.existsSync(dataPath)) {
-      console.warn("⚠️ Data file not found:", dataPath);
+    if (!supabaseUrl || !supabaseKey) {
+      console.warn("⚠️ Supabase credentials missing");
       return "";
     }
 
-    const fileContent = fs.readFileSync(dataPath, "utf-8");
-    const data = JSON.parse(fileContent);
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (!data.posts || !Array.isArray(data.posts)) return "";
+    let query = supabase
+      .from('posts')
+      .select('text, total_engagement, author_display_name, category') // Added category to select, though it might not be in schema based on user description, checking schema...
+      // User said schema:
+      // CREATE TABLE IF NOT EXISTS public.posts ( ... text, total_engagement ... )
+      // No category column in the NEW schema provided by user in the prompt.
+      // Wait, user provided: "CREATE TABLE IF NOT EXISTS public.posts ... text, total_engagement ... "
+      // There is NO category column in the new schema.
+      // So I cannot select 'category'. I should adhere to the plan: text search for category.
 
-    let relevantPosts = data.posts;
+      .order('total_engagement', { ascending: false })
+      .limit(10);
 
-    // 2. Filter by Category (if using analyzed data and category is not "General")
-    if (fs.existsSync(analyzedPath) && userCategory && userCategory !== 'General') {
-      const filtered = data.posts.filter((p: any) =>
-        p.category && p.category.toLowerCase().includes(userCategory.toLowerCase())
-      );
-      // If we found posts for this specific category, use them. 
-      // Otherwise, fallback to all valid posts (so we don't return empty).
-      if (filtered.length > 0) {
-        relevantPosts = filtered;
-        console.log(`🎯 Found ${filtered.length} viral posts for category: ${userCategory}`);
-      }
+    // Filter by text content if category is provided
+    if (userCategory && userCategory !== 'General') {
+      query = query.ilike('text', `%${userCategory}%`);
     }
 
-    // 3. Sort by Engagement (Likes + Recasts + Replies) if not already sorted
-    const sortedPosts = relevantPosts.sort((a: any, b: any) => {
-      const engageA = (a.metrics?.totalEngagement || 0);
-      const engageB = (b.metrics?.totalEngagement || 0);
-      return engageB - engageA;
-    });
+    const { data: posts, error } = await query;
 
-    // 4. Take Top 5
-    const topPosts = sortedPosts.slice(0, 5).map((p: any) => {
-      const catLabel = p.category ? `[Category: ${p.category}]` : '';
-      return `- ${catLabel} "${p.text.replace(/\n/g, " ")}"`;
-    }).join("\n");
+    if (error) {
+      console.error("❌ Supabase Error fetching posts:", error.message);
+      return "";
+    }
 
-    return `
-VIRAL REFENCE POSTS (Analyze the style, ignoring the specific topic):
-${topPosts}
-    `;
+    if (!posts || posts.length === 0) {
+      // Fallback to top viral posts generally if specific category not found
+      console.log(`⚠️ No posts found for category ${userCategory}, fetching general top posts.`);
+      const { data: generalPosts } = await supabase
+        .from('posts')
+        .select('text, total_engagement')
+        .order('total_engagement', { ascending: false })
+        .limit(5);
+
+      if (generalPosts) {
+        return formatPosts(generalPosts);
+      }
+      return "";
+    }
+
+    return formatPosts(posts);
+
   } catch (error) {
-    console.error("Error reading posts.json:", error);
+    console.error("Error fetching from Supabase:", error);
     return "";
   }
+}
+
+function formatPosts(posts: any[]): string {
+  const formatted = posts.slice(0, 5).map((p: any) => {
+    return `- "${p.text.replace(/\n/g, " ")}" (Engagement: ${p.total_engagement})`;
+  }).join("\n");
+
+  return `
+VIRAL REFENCE POSTS (Analyze the style, ignoring the specific topic):
+${formatted}
+    `;
 }
 
 export async function POST(req: Request) {
@@ -78,7 +91,7 @@ export async function POST(req: Request) {
 
     // Get dynamic context based on the requested category
     // This is the "Conditional" retrieval the user asked for.
-    const viralPostsContext = getSmartContext(category);
+    const viralPostsContext = await getSmartContext(category);
 
     const finalPrompt = `
       ${SYSTEM_INSTRUCTION}

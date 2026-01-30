@@ -24,9 +24,12 @@ export default function HookResult({ hook, onTryAnother, onBack }: HookResultPro
   const [copied, setCopied] = useState(false);
   const [showExitWarning, setShowExitWarning] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [paymentHash, setPaymentHash] = useState<`0x${string}` | undefined>(undefined);
+  const [generationIntent, setGenerationIntent] = useState<'image' | 'video'>('image');
 
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -59,8 +62,12 @@ export default function HookResult({ hook, onTryAnother, onBack }: HookResultPro
   // Watch for payment success -> Trigger Generation
   useEffect(() => {
     if (isPaymentSuccess) {
-      toast.success("Payment confirmed! Generating image...", { id: "payment" });
-      generateImageAfterPayment();
+      toast.success("Payment confirmed! Starting generation...", { id: "payment" });
+      if (generationIntent === 'video') {
+        generateImageAndThenVideo();
+      } else {
+        generateImageAfterPayment();
+      }
       setIsPaying(false);
     }
   }, [isPaymentSuccess]);
@@ -71,7 +78,7 @@ export default function HookResult({ hook, onTryAnother, onBack }: HookResultPro
   // Full content untuk display
   const fullContent = hook.content;
 
-  const generateImageAfterPayment = async () => {
+  const generateImageAfterPayment = async (): Promise<string | null> => {
     setIsGeneratingImage(true);
     try {
       const response = await fetch('/api/generate-image', {
@@ -89,14 +96,88 @@ export default function HookResult({ hook, onTryAnother, onBack }: HookResultPro
       if (data.imageUrl) {
         setGeneratedImageUrl(data.imageUrl);
         toast.success("Image generated successfully!");
+        return data.imageUrl;
       }
+      return null;
     } catch (error: any) {
       console.error("Error generating image:", error);
       toast.error(`Error: ${error.message}`);
+      return null;
     } finally {
       setIsGeneratingImage(false);
     }
   }
+
+  const generateVideoFromImage = async (imageUrl: string) => {
+    setIsGeneratingVideo(true);
+    try {
+      const response = await fetch('/api/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: fullContent,
+          imageUrl: imageUrl
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate video');
+      }
+
+      if (data.videoUrl) {
+        setGeneratedVideoUrl(data.videoUrl);
+        toast.success("Video generated successfully!");
+      }
+    } catch (error: any) {
+      console.error("Error generating video:", error);
+      toast.error(`Error: ${error.message}`);
+    } finally {
+      setIsGeneratingVideo(false);
+    }
+  };
+
+  const generateImageAndThenVideo = async () => {
+    // 1. Generate Image
+    const imageUrl = await generateImageAfterPayment();
+
+    // 2. If successful, Generate Video
+    if (imageUrl) {
+      await generateVideoFromImage(imageUrl);
+    }
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!generatedImageUrl) return;
+    setIsGeneratingVideo(true);
+    try {
+      const response = await fetch('/api/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: fullContent,
+          imageUrl: generatedImageUrl
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate video');
+      }
+
+      if (data.videoUrl) {
+        setGeneratedVideoUrl(data.videoUrl); // Note: API returns { videoUrl: "data:video/mp4;base64,..." }
+        toast.success("Video generated successfully!");
+      }
+    } catch (error: any) {
+      console.error("Error generating video:", error);
+      toast.error(`Error: ${error.message}`);
+    } finally {
+      setIsGeneratingVideo(false);
+    }
+  };
 
   const handleGenerateImage = async () => {
     // Developer Mode: Bypass Payment & Wallet Connection
@@ -234,11 +315,26 @@ export default function HookResult({ hook, onTryAnother, onBack }: HookResultPro
               </div>
             )}
 
+            {/* AI Generated Video Display */}
+            {generatedVideoUrl && (
+              <div className="mt-4 rounded-xl overflow-hidden border border-white/10">
+                <video src={generatedVideoUrl} controls autoPlay loop className="w-full h-auto object-cover" />
+              </div>
+            )}
+
             {/* Loading Indicator */}
             {isGeneratingImage && (
               <div className="mt-4 p-4 rounded-xl bg-white/5 flex items-center justify-center gap-3">
                 <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                 <span className="text-sm text-gray-400">Generating visual...</span>
+              </div>
+            )}
+
+            {/* Video Loading Indicator */}
+            {isGeneratingVideo && (
+              <div className="mt-4 p-4 rounded-xl bg-white/5 flex items-center justify-center gap-3">
+                <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm text-gray-400">Generating video animation... (This may take ~30s)</span>
               </div>
             )}
           </div>
@@ -277,12 +373,12 @@ export default function HookResult({ hook, onTryAnother, onBack }: HookResultPro
               </button>
             </div>
 
-            {/* Row 2: Generate Image */}
-            {!generatedImageUrl && (
+            {/* Row 2: Visualize Options (Show both if nothing generated yet) */}
+            {!generatedImageUrl && !generatedVideoUrl && (
               <button
                 onClick={handleGenerateImage}
                 disabled={isGeneratingImage || isConfirmingWallet || isPaying || isWaitingReceipt}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-xl transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-xl transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isGeneratingImage ? (
                   <>
@@ -305,6 +401,37 @@ export default function HookResult({ hook, onTryAnother, onBack }: HookResultPro
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     Generate Visual ({process.env.NEXT_PUBLIC_MOCK_PAYMENT === 'true' ? 'Free / Dev' : '0.0001 ETH'})
+                  </>
+                )}
+              </button>
+            )}
+
+            {(isConfirmingWallet || isPaying || isWaitingReceipt) && !generatedImageUrl && (
+              <div className="w-full py-2 flex items-center justify-center gap-2 text-yellow-400 text-sm">
+                <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                {isConfirmingWallet ? 'Confirm in Wallet...' : 'Processing Payment...'}
+              </div>
+            )}
+
+            {/* Row 3: Animate Video (Only if Image exists & Video doesn't) - Legacy option to upgrade */}
+            {generatedImageUrl && !generatedVideoUrl && (
+              <button
+                onClick={handleGenerateVideo}
+                disabled={isGeneratingVideo}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-xl transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isGeneratingVideo ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Animating...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Animate Image (Video)
                   </>
                 )}
               </button>
