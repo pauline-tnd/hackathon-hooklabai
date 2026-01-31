@@ -3,13 +3,13 @@
 // 1. IMPORT WAJIB DI ATAS
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import { useAccount } from 'wagmi';
+import { useAccount, useSendTransaction, useWaitForTransactionReceipt, useSwitchChain, useChainId } from 'wagmi';
+import { parseEther } from 'viem';
 import toast from 'react-hot-toast';
 
 // IMPORT DRIVER.JS
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
-import "./styles/driver-theme.css"; // Custom dark theme
 
 // 2. IMPORT COMPONENTS
 import VideoSplash from './components/SplashScreen';
@@ -19,9 +19,7 @@ import WalletConnect from './components/WalletConnect';
 import NameInputModal from './components/NameInputModal';
 import HooksSelection from './components/HookSelection';
 import TransactionModal from './components/TransactionModal';
-// HookResult dihapus dari import karena didefinisikan di file ini (berdasarkan kode Anda)
-// Jika HookResult sebenarnya file terpisah, hapus definisi di bawah dan uncomment import ini.
-// import HookResult from './components/HookResult'; 
+// HookResult component is defined internally in this file
 import DecryptedText from './components/DecryptedText';
 import BubbleMenu from './components/BubbleMenu';
 import HistoryModal from './components/HistoryModal';
@@ -29,13 +27,7 @@ import HistoryModal from './components/HistoryModal';
 import { userStorage } from '../utils/userStorage';
 
 import SplitText from "../components/SplitText";
-import ShinyText from "../components/ShinyText";
-
-// --- HOOK RESULT COMPONENT (Internal Definition based on your code) ---
-// Note: Kalau ini sebenarnya file terpisah, hapus blok ini dan pastikan import di atas benar.
-// Saya gunakan versi Anda di sini agar kode ini langsung jalan.
-import { useSendTransaction, useWaitForTransactionReceipt, useSwitchChain, useChainId } from 'wagmi';
-import { parseEther } from 'viem';
+import ShinyText from "../components/ShinyText"; // Ensure correct path
 
 // ... (Definisi HookResult ada di bawah komponen Home agar rapi)
 
@@ -54,10 +46,27 @@ type Hook = {
 type AppView = 'splash' | 'landing' | 'app';
 type AppState = 'initial' | 'selecting' | 'result';
 
+// --- REUSABLE HEADER COMPONENT ---
+function AppHeader({ className = "" }: { className?: string }) {
+  return (
+    <div className={`flex justify-center w-full z-50 ${className}`}>
+      <div className="flex items-center gap-3 px-6 py-3 bg-white/5 backdrop-blur-md border border-white/10 rounded-full shadow-lg">
+        <div className="relative w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center p-[1px]">
+          <div className="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden">
+            <img src="/logo_hooklab.png" alt="HookLab" className="w-full h-full object-cover" />
+          </div>
+        </div>
+        <span className="text-white font-bold text-lg font-poppins tracking-wide">HookLab AI</span>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [currentView, setCurrentView] = useState<AppView>('splash');
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+
 
   // --- DRIVER JS REF ---
   const driverObj = useRef<any>(null);
@@ -104,7 +113,6 @@ export default function Home() {
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [pendingHook, setPendingHook] = useState<Hook | null>(null);
   const [showNameModal, setShowNameModal] = useState(false);
-  const [tourCompleted, setTourCompleted] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
@@ -133,79 +141,58 @@ export default function Home() {
 
   // --- LOGIC TOUR START ---
   useEffect(() => {
-    if (isConnected && isDataLoaded && currentView === 'app') {
-      const hasToured = localStorage.getItem(`hooklab_tour_completed_${address}`);
+    // STRICT CHECK: Pastikan address valid (string) dan kondisi lain terpenuhi
+    if (isConnected && isDataLoaded && currentView === 'app' && !showNameModal && address) {
+      const tourKey = `hooklab_tour_completed_${address}`;
+      const hasToured = localStorage.getItem(tourKey);
+
       if (!hasToured) {
-        // Delay tour start for smooth UX
-        setTimeout(() => startTourPart1(), 500);
-      } else {
-        setTourCompleted(true);
+        // Delay sedikit lebih lama untuk stabilitas render & memastikan tidak ada race condition
+        const timer = setTimeout(() => {
+          // DOUBLE CHECK: Cek lagi di dalam timeout (karena state/localStorage mungkin berubah)
+          const currentKey = `hooklab_tour_completed_${address}`;
+          if (!localStorage.getItem(currentKey)) {
+            startTourPart1();
+          }
+        }, 800);
+        return () => clearTimeout(timer);
       }
     }
-  }, [isConnected, isDataLoaded, currentView, address]);
-
-  // Show name modal after tour is completed/skipped
-  useEffect(() => {
-    if (tourCompleted && isConnected && isDataLoaded && !userName) {
-      setShowNameModal(true);
-    }
-  }, [tourCompleted, isConnected, isDataLoaded, userName]);
-
-  const handleSkipTour = useCallback(() => {
-    if (driverObj.current) driverObj.current.destroy();
-    setIsTourActive(false);
-    setTourCompleted(true);
-    localStorage.setItem(`hooklab_tour_completed_${address}`, 'true');
-    toast.success("Tour dilewati. Anda bisa mulai berkarya!");
-  }, [address]);
-
-  const completeTour = useCallback(() => {
-    localStorage.setItem(`hooklab_tour_completed_${address}`, 'true');
-    setIsTourActive(false);
-    setTourCompleted(true);
-    if (driverObj.current) driverObj.current.destroy();
-    toast.success("🎉 Tour Selesai! Selamat berkarya.");
-  }, [address]);
+  }, [isConnected, isDataLoaded, currentView, address, showNameModal]);
 
   const startTourPart1 = () => {
+    // LANGSUNG SET SEBAGAI COMPLETED AGAR TIDAK MUNCUL LAGI
+    if (address) {
+      localStorage.setItem(`hooklab_tour_completed_${address}`, 'true');
+    }
+
     setIsTourActive(true);
     driverObj.current = driver({
       showProgress: true,
       animate: true,
-      allowClose: true,
-      smoothScroll: true,
-      stagePadding: 10,
-      stageRadius: 12,
-      popoverClass: 'hooklab-tour-popover',
-      onCloseClick: () => handleSkipTour(),
-      onDestroyStarted: () => {
-        // If user clicks outside during tour
-        if (isTourActive && !tourCompleted) {
-          handleSkipTour();
-        }
-      },
+      allowClose: false,
       steps: [
         {
           element: '#tour-auto-prompt',
           popover: {
-            title: '✨ Quick Categories',
-            description: 'Click a category here to get instant viral prompts without typing!',
+            title: '1. Prompt Automation',
+            description: 'Click a category here to get an instant viral prompt without typing.',
             side: "bottom", align: 'center'
           }
         },
         {
           element: '#tour-manual-input',
           popover: {
-            title: '📝 Custom Prompt',
-            description: 'Or type your specific topic here for more personalized results.',
+            title: '2. Manual Prompt',
+            description: 'Or type your specific topic/idea here.',
             side: "top", align: 'center'
           }
         },
         {
           element: '#tour-generate-btn',
           popover: {
-            title: '🚀 Generate Hooks',
-            description: 'Click this button to create viral Hooks with AI. Try it now!',
+            title: '3. Generate',
+            description: 'Click this button to create Hooks. (Click now to continue the demo!)',
             side: "left", align: 'center'
           }
         }
@@ -221,65 +208,59 @@ export default function Home() {
         driverObj.current = driver({
           showProgress: true,
           animate: true,
-          allowClose: true,
-          smoothScroll: true,
-          stagePadding: 10,
-          stageRadius: 12,
-          popoverClass: 'hooklab-tour-popover',
-          onCloseClick: () => handleSkipTour(),
           steps: [
             {
-              element: '#tour-hook-list',
+              element: '#tour-hook-list', // Pastikan ID ini ada di HooksSelection.tsx
               popover: {
-                title: '🎯 Choose Your Best Hook',
-                description: 'AI generated multiple creative options. Click a hook card to see the details!',
+                title: '4. Select Result',
+                description: 'AI generates several options. Select a hook card to view details.',
                 side: "top", align: 'center'
               }
             }
           ]
         });
         driverObj.current.drive();
-      }, 600);
+      }, 500);
     }
-  }, [appState, isTourActive, handleSkipTour]);
+  }, [appState, isTourActive]);
 
-  // TOUR PART 3: RESULT (Final Step)
+  // TOUR PART 3: RESULT
   useEffect(() => {
     if (appState === 'result' && isTourActive) {
       setTimeout(() => {
         driverObj.current = driver({
           showProgress: true,
           animate: true,
-          allowClose: true,
-          smoothScroll: true,
-          stagePadding: 10,
-          stageRadius: 12,
-          popoverClass: 'hooklab-tour-popover',
-          onCloseClick: () => completeTour(),
           steps: [
             {
               element: '#tour-result-content',
               popover: {
-                title: '🎨 Content Preview',
-                description: 'This is your viral content! Image and text preview are ready.',
+                title: '5. Content & Visuals',
+                description: 'This is your final content. You can manage text and preview AI visuals here.',
                 side: "bottom", align: 'center'
               }
             },
             {
-              element: '#tour-action-buttons',
+              element: '#tour-action-buttons', // Pastikan ID ini ada di HookResult component (di bawah)
               popover: {
-                title: '📱 Actions & Share',
-                description: 'Copy text, post to Base, or generate AI visuals. Happy creating!',
+                title: '6. Actions',
+                description: 'Copy text, post directly to Base, or generate new visual assets.',
                 side: "top", align: 'center',
-                onNextClick: () => completeTour()
+                doneBtnText: 'Done',
+                onNextClick: () => {
+                  localStorage.setItem(`hooklab_tour_completed_${address}`, 'true');
+                  setIsTourActive(false);
+                  driverObj.current.destroy();
+                  toast.success("Tour Completed! Happy creating.");
+                }
               }
             }
           ]
         });
         driverObj.current.drive();
-      }, 600);
+      }, 500);
     }
-  }, [appState, isTourActive, completeTour]);
+  }, [appState, isTourActive, address]);
 
 
   const handleNameSubmit = useCallback((name: string) => {
@@ -360,22 +341,17 @@ export default function Home() {
       setCredits(5);
       setIsDataLoaded(false);
       setShowNameModal(false);
-      setTourCompleted(false);
       return;
     }
     const userData = userStorage.getUserData(address);
     if (userData && userData.name) {
       setUserName(userData.name);
       setCredits(userData.credits);
-      // User already has name, check if tour was done
-      const hasToured = localStorage.getItem(`hooklab_tour_completed_${address}`);
-      if (hasToured) {
-        setTourCompleted(true);
-      }
+      setShowNameModal(false);
     } else {
       setUserName('');
       setCredits(1000);
-      // Don't show name modal yet - wait for tour to complete
+      setShowNameModal(true);
     }
     setIsDataLoaded(true);
   }, [isConnected, address]);
@@ -439,6 +415,7 @@ export default function Home() {
   const handleBackToSelection = useCallback(() => {
     setAppState('selecting');
     setSelectedHook(null);
+    setHistoryId(undefined); // Reset history context
   }, []);
 
   // UI Render
@@ -457,6 +434,8 @@ export default function Home() {
       </main>
     );
   }
+
+  // ... rest of the main component ...
 
   return (
     <>
@@ -505,13 +484,27 @@ export default function Home() {
             ) : (
               // UI UTAMA (INPUT)
               <>
-                <div className="pt-12 px-6 flex items-center gap-3">
-                  <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                    <div className="relative w-10 h-10 flex items-center justify-center">
-                      <img src="/logo_hooklab.png" alt="Logo HookLab AI" />
+                <div className="pt-8 px-6 flex items-center justify-between relative z-50">
+                  {/* Left: Logo Pill */}
+                  <div className="flex items-center gap-3 px-4 py-2 bg-white/5 backdrop-blur-md border border-white/10 rounded-full shadow-lg">
+                    <div className="relative w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center p-[1px]">
+                      <div className="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden">
+                        <img src="/logo_hooklab.png" alt="HookLab" className="w-full h-full object-cover" />
+                      </div>
                     </div>
+                    <span className="text-white font-bold text-lg font-poppins tracking-wide">HookLab AI</span>
                   </div>
-                  <span className="text-white font-bold text-xl font-poppins tracking-wide">HookLab AI</span>
+
+                  {/* Right: History Button */}
+                  <button
+                    onClick={() => setShowHistory(true)}
+                    className="w-10 h-10 flex items-center justify-center text-white/60 hover:text-white transition-colors bg-white/5 rounded-full backdrop-blur-sm border border-white/5"
+                    data-tip="History"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </button>
                 </div>
 
                 <div className="flex-1 flex flex-col items-center justify-center px-6 -mt-20 relative z-0">
@@ -574,24 +567,14 @@ export default function Home() {
                     </div>
 
                     <div className="flex items-center justify-between mt-3 px-2">
+                      {/* Footer Elements (AI Ready, Buttons, etc) */}
                       <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                         <span>AI Ready</span>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => setShowHistory(true)}
-                          className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all tooltip tooltip-left"
-                          data-tip="History"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </button>
-
-                        <div className="h-4 w-[1px] bg-white/10"></div>
-
+                        {/* History button moved to header */}
                         <div className="flex items-center gap-2 text-gray-400 text-sm">
                           <WalletConnect isConnected={true} />
                           <span className="bg-white/5 px-2 py-1 rounded-md border border-white/5 text-xs font-mono">{credits}/5</span>
@@ -614,16 +597,18 @@ export default function Home() {
 }
 
 // --- HOOK RESULT COMPONENT (Internal Definition) ---
-// Note: ID for TOUR has been added here
 type HookResultProps = {
   hook: Hook;
   onTryAnother: () => void;
   onBack: () => void;
-  initialHistoryId?: string;
+  initialHistoryId?: string; // New Prop
 };
 
 function HookResult({ hook, onTryAnother, onBack, initialHistoryId }: HookResultProps) {
   const [copied, setCopied] = useState(false);
+  const [showExitWarning, setShowExitWarning] = useState(false);
+
+  // Full content untuk display
   const fullContent = hook.content;
 
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
@@ -638,71 +623,462 @@ function HookResult({ hook, onTryAnother, onBack, initialHistoryId }: HookResult
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
   const { data: hash, sendTransaction, isPending: isConfirmingWallet, error: sendError } = useSendTransaction();
-  const { isLoading: isWaitingReceipt, isSuccess: isPaymentSuccess } = useWaitForTransactionReceipt({ hash: paymentHash });
 
-  // ... (Effect logic for payment same as before, omitted for brevity but should be here) ...
-  // Assume logic is same as your previous code
+  const { isLoading: isWaitingReceipt, isSuccess: isPaymentSuccess } = useWaitForTransactionReceipt({
+    hash: paymentHash,
+  });
 
-  // Placeholder functions for logic (to make code compilable in this snippet)
-  const handleCopy = () => { navigator.clipboard.writeText(fullContent); setCopied(true); setTimeout(() => setCopied(false), 2000); };
-  const handleShare = () => { window.open(`https://warpcast.com/~/compose?text=${encodeURIComponent(fullContent)}`, '_blank'); };
-  const handleGenerateImage = () => { toast.success("Feature demo"); };
-  const handleGenerateVideo = () => { toast.success("Feature demo"); };
-  const handleDownload = (url: string, name: string) => { };
-  function getInitial(name: string) { return name.charAt(0); }
-  function getAvatarColor(name: string) { return 'from-blue-500 to-indigo-600'; }
-  const hashtags = ['#Web3', '#Base'];
+  // Watch for transaction hash updates
+  useEffect(() => {
+    if (hash) {
+      setPaymentHash(hash);
+      setIsPaying(true);
+      toast.loading("Processing payment...", { id: "payment" });
+    }
+  }, [hash]);
+
+  // Watch for errors
+  useEffect(() => {
+    if (sendError) {
+      toast.error("Payment rejected or failed");
+      setIsPaying(false);
+    }
+  }, [sendError]);
+
+  // Watch for payment success -> Trigger Generation
+  useEffect(() => {
+    if (isPaymentSuccess) {
+      toast.success("Payment confirmed! Starting generation...", { id: "payment" });
+      if (generationIntent === 'video') {
+        generateImageAndThenVideo();
+      } else {
+        generateImageAfterPayment();
+      }
+      setIsPaying(false);
+    }
+  }, [isPaymentSuccess]);
+
+  // Generate hashtags (Dynamic based on topic)
+  const hashtags = [`#${hook.topic.replace(/\s+/g, '')}`, '#Web3', '#HookLab', '#Farcaster'];
+
+  const generateImageAfterPayment = async (): Promise<string | null> => {
+    setIsGeneratingImage(true);
+    try {
+      const response = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: fullContent,
+          historyId: initialHistoryId // Pass ID for update
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate image');
+      }
+
+      if (data.imageUrl) {
+        setGeneratedImageUrl(data.imageUrl);
+        toast.success("Image generated successfully!");
+        return data.imageUrl;
+      }
+      return null;
+    } catch (error: any) {
+      console.error("Error generating image:", error);
+      toast.error(`Error: ${error.message}`);
+      return null;
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  }
+
+  const generateVideoFromImage = async (imageUrl: string) => {
+    setIsGeneratingVideo(true);
+    try {
+      const response = await fetch('/api/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: fullContent,
+          imageUrl: imageUrl
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate video');
+      }
+
+      if (data.videoUrl) {
+        setGeneratedVideoUrl(data.videoUrl);
+        toast.success("Video generated successfully!");
+      }
+    } catch (error: any) {
+      console.error("Error generating video:", error);
+      toast.error(`Error: ${error.message}`);
+    } finally {
+      setIsGeneratingVideo(false);
+    }
+  };
+
+  const generateImageAndThenVideo = async () => {
+    // 1. Generate Image
+    const imageUrl = await generateImageAfterPayment();
+
+    // 2. If successful, Generate Video
+    if (imageUrl) {
+      await generateVideoFromImage(imageUrl);
+    }
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!generatedImageUrl) {
+      // If no image, we need to generate image first (FULL FLOW)
+      setGenerationIntent('video');
+      handleGenerateImageCommon(); // Reuse payment flow
+      return;
+    }
+
+    // If image exists, just animate it
+    setIsGeneratingVideo(true);
+    try {
+      const response = await fetch('/api/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: fullContent,
+          imageUrl: generatedImageUrl
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate video');
+      }
+
+      if (data.videoUrl) {
+        setGeneratedVideoUrl(data.videoUrl); // Note: API returns { videoUrl: "data:video/mp4;base64,..." }
+        toast.success("Video generated successfully!");
+      }
+    } catch (error: any) {
+      console.error("Error generating video:", error);
+      toast.error(`Error: ${error.message}`);
+    } finally {
+      setIsGeneratingVideo(false);
+    }
+  };
+
+  const handleGenerateImageCommon = async () => {
+    // Developer Mode: Bypass Payment & Wallet Connection
+    if (process.env.NEXT_PUBLIC_MOCK_PAYMENT === 'true') {
+      toast.success("Developer Mode: Payment Bypassed");
+      if (generationIntent === 'video' && !generatedImageUrl) {
+        generateImageAndThenVideo();
+      } else {
+        generateImageAfterPayment();
+      }
+      return;
+    }
+
+    if (!isConnected || !address) {
+      toast.error("Please connect your wallet first!");
+      return;
+    }
+
+    // Auto-switch to Configured Network if wrong
+    const configuredChainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || "31337");
+
+    if (chainId !== configuredChainId) {
+      try {
+        toast.loading(`Switching to network ID ${configuredChainId}...`, { duration: 2000 });
+        await switchChainAsync({ chainId: configuredChainId });
+      } catch (error) {
+        toast.error(`Failed to switch network. Please switch to chain ID ${configuredChainId} manually.`);
+        return;
+      }
+    }
+
+    // Check if already generated (unless upgrading to video ? logic might vary)
+    if (generatedImageUrl && generationIntent === 'image') return;
+
+    const price = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PRICE || "0.0001";
+    const receiver = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`;
+
+    if (!receiver) {
+      toast.error("Contract address config missing");
+      return;
+    }
+
+    try {
+      sendTransaction({
+        to: receiver,
+        value: parseEther(price),
+      });
+    } catch (e) {
+      console.error("Transaction failed to start", e);
+    }
+  };
+
+  const handleGenerateImage = () => {
+    setGenerationIntent('image');
+    handleGenerateImageCommon();
+  }
+
+  // Override handleGenerateVideo to also use payment if starting from scratch
+  const handleGenerateVideoClick = () => {
+    setGenerationIntent('video');
+    if (!generatedImageUrl) {
+      handleGenerateImageCommon();
+    } else {
+      handleGenerateVideo();
+    }
+  }
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(fullContent + '\n\n' + hashtags.join(' '));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShare = async () => {
+    // 1. Copy to clipboard automatically
+    handleCopy();
+
+    // 2. Open Warpcast Compose (Direct form posting)
+    const text = fullContent + '\n\n' + hashtags.join(' ');
+    const encodedText = encodeURIComponent(text);
+    const warpcastUrl = `https://warpcast.com/~/compose?text=${encodedText}`;
+
+    // Open in new tab/window
+    window.open(warpcastUrl, '_blank');
+  };
+
+  function getInitial(name: string) {
+    if (!name) return 'A';
+    return name.trim().charAt(0).toUpperCase();
+  }
+
+  function getAvatarColor(name: string) {
+    const colors = [
+      'from-blue-500 to-indigo-600',
+      'from-emerald-500 to-teal-600',
+      'from-pink-500 to-rose-600',
+      'from-purple-500 to-violet-600',
+      'from-orange-500 to-amber-600',
+    ];
+    const index = name ? name.length % colors.length : 0;
+    return colors[index];
+  }
+
+  function handleDownload(url: string, filename: string) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
   return (
-    <div className="flex-1 flex flex-col bg-black overflow-y-auto relative">
-      {/* Header */}
-      <div className="pt-12 px-6 pb-6 flex items-center gap-3">
-        <button onClick={onBack} className="w-8 h-8 flex items-center justify-center text-white/60 hover:text-white transition-colors">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-        </button>
-        <span className="text-white font-bold text-xl font-poppins tracking-wide">HookLab AI</span>
-      </div>
+    <div className="flex-1 flex flex-col bg-black overflow-hidden relative w-full h-full">
+      {/* Fixed Header */}
+      {/* Fixed Header */}
+      <div className="absolute top-0 left-0 right-0 z-[100] flex flex-col items-center w-full">
+        {/* Stronger Backdrop */}
+        <div className="absolute inset-0 bg-black/90 backdrop-blur-3xl border-b border-white/5 -z-10 shadow-2xl" />
 
-      {/* Content Card */}
-      <div className="flex-1 px-6 pb-6">
-        {/* ID UNTUK TOUR STEP 5 (Content) */}
-        <div id="tour-result-content" className="bg-[#1A1A1A] rounded-2xl p-5 border border-white/10 h-full flex flex-col">
-          <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/10">
-            <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(hook.username)} flex items-center justify-center text-white text-sm font-bold`}>{getInitial(hook.username)}</div>
-              <span className="text-white font-medium">{hook.username}</span>
-            </div>
-            <span className="px-3 py-1 bg-blue-600 text-white text-xs rounded-full font-medium">{hook.topic}</span>
+        <div className="w-full max-w-md pt-8 px-6 pb-4 flex items-center justify-between relative">
+          <button
+            onClick={onBack}
+            className="w-10 h-10 flex items-center justify-center text-white/60 hover:text-white transition-colors bg-white/5 rounded-full backdrop-blur-sm border border-white/5 z-50 transform hover:scale-105 active:scale-95"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 pt-4">
+            <AppHeader />
           </div>
 
-          <div className="flex-1 overflow-y-auto mb-4">
-            <p className="text-white text-sm leading-relaxed whitespace-pre-line">{fullContent}</p>
-            {/* Image/Video Placeholders here */}
-          </div>
-
-          {/* ID UNTUK TOUR STEP 6 (Action Buttons) */}
-          <div id="tour-action-buttons" className="flex flex-col gap-3">
-            <div className="flex gap-3">
-              <button onClick={handleCopy} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 text-white rounded-xl transition-all font-medium active:scale-[0.98]">
-                {copied ? 'Copied!' : 'Copy'}
-              </button>
-              <button onClick={handleShare} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl transition-all font-medium shadow-lg hover:shadow-blue-500/30 active:scale-[0.98]">
-                Post on Base
-              </button>
-            </div>
-            {!generatedImageUrl && (
-              <button onClick={handleGenerateImage} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl transition-all font-medium shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(37,99,235,0.5)] active:scale-[0.98]">
-                Generate Visual
-              </button>
-            )}
-          </div>
+          <div className="w-10"></div> {/* Spacer for balance */}
         </div>
       </div>
 
-      <div className="px-6 pb-12">
-        <button onClick={onTryAnother} className="w-full px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white rounded-2xl font-bold text-lg transition-all active:scale-[0.98] shadow-lg">
-          Try Another Hooks
-        </button>
+      {/* Scrollable Content */}
+      <div className="relative z-10 w-full flex flex-col overflow-y-auto h-full pt-[100px]">
+        <div className="flex-1 px-6 pb-6 pt-4">
+          <div id="tour-result-content" className="bg-[#1A1A1A] rounded-2xl p-5 border border-white/10 h-full flex flex-col">
+            {/* Header Card */}
+            <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(
+                    hook.username
+                  )} flex items-center justify-center text-white text-sm font-bold`}
+                >
+                  {getInitial(hook.username)}
+                </div>
+
+                <span className="text-white font-medium">{hook.username}</span>
+              </div>
+              <span className="px-3 py-1 bg-blue-600 text-white text-xs rounded-full font-medium">
+                {hook.topic}
+              </span>
+            </div>
+
+            {/* Content Text */}
+            <div className="flex-1 overflow-y-auto mb-4">
+              <p className="text-white text-sm leading-relaxed whitespace-pre-line">
+                {fullContent}
+              </p>
+
+              {/* AI Generated Image Display */}
+              {generatedImageUrl && (
+                <div className="mt-4 rounded-xl overflow-hidden border border-white/10 relative group">
+                  <img src={generatedImageUrl} alt="AI Generated" className="w-full h-auto object-cover" />
+                  <button
+                    onClick={() => handleDownload(generatedImageUrl, `hooklab-image-${Date.now()}.png`)}
+                    className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100"
+                    title="Download Image"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+
+              {/* AI Generated Video Display */}
+              {generatedVideoUrl && (
+                <div className="mt-4 rounded-xl overflow-hidden border border-white/10 relative group">
+                  <video src={generatedVideoUrl} controls autoPlay loop className="w-full h-auto object-cover" />
+                  <button
+                    onClick={() => handleDownload(generatedVideoUrl, `hooklab-video-${Date.now()}.mp4`)}
+                    className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100"
+                    title="Download Video"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+
+              {/* Loading Indicator */}
+              {isGeneratingImage && (
+                <div className="mt-4 p-4 rounded-xl bg-white/5 flex items-center justify-center gap-3">
+                  <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-sm text-gray-400">Generating visual...</span>
+                </div>
+              )}
+
+              {/* Video Loading Indicator */}
+              {isGeneratingVideo && (
+                <div className="mt-4 p-4 rounded-xl bg-white/5 flex items-center justify-center gap-3">
+                  <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-sm text-gray-400">Generating video animation... (This may take ~30s)</span>
+                </div>
+              )}
+            </div>
+
+            {/* Hashtags */}
+            <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-white/10">
+              {hashtags.map((tag, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-blue-600/20 text-blue-400 text-xs rounded-full font-medium border border-blue-500/30"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+
+            {/* Action Buttons */}
+            <div id="tour-action-buttons" className="flex flex-col gap-3">
+              {/* Row 1: Copy & Share */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCopy}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 text-white rounded-xl transition-all font-medium active:scale-[0.98]"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl transition-all font-medium shadow-lg hover:shadow-blue-500/30 active:scale-[0.98]"
+                >
+                  
+                  Post
+                </button>
+              </div>
+
+              {/* Row 2: Generate Visual (Single Button) */}
+              {!generatedImageUrl && !generatedVideoUrl && (
+                <button
+                  onClick={handleGenerateImage}
+                  disabled={isGeneratingImage || isConfirmingWallet || isPaying || isWaitingReceipt}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(147,51,234,0.3)] hover:shadow-[0_0_25px_rgba(147,51,234,0.5)] active:scale-[0.98]"
+                >
+                  {isGeneratingImage ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  )}
+                  Generate Visual
+                </button>
+              )}
+
+              {(isConfirmingWallet || isPaying || isWaitingReceipt) && !generatedImageUrl && (
+                <div className="w-full py-2 flex items-center justify-center gap-2 text-yellow-400 text-sm">
+                  <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                  {isConfirmingWallet ? 'Confirm in Wallet...' : 'Processing Payment...'}
+                </div>
+              )}
+
+              {/* Row 3: Animate Video (Only if Image exists & Video doesn't) - Upgrade option */}
+              {generatedImageUrl && !generatedVideoUrl && (
+                <button
+                  onClick={handleGenerateVideoClick}
+                  disabled={isGeneratingVideo}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                >
+                  {isGeneratingVideo ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Animating...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Animate Image (Video)
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Try Another Button - Placed inside scrollable area for accessibility */}
+          <div className="px-6 pb-12 pt-6">
+            <button
+              onClick={onTryAnother}
+              className="w-full px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white rounded-2xl font-bold text-lg transition-all active:scale-[0.98] shadow-lg"
+            >
+              Try Another Hooks
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
