@@ -862,10 +862,11 @@ function HookResult({ hook, onTryAnother, onBack, initialHistoryId }: HookResult
     if (generatedImageUrl && generationIntent === 'image') return;
 
     const price = process.env.NEXT_PUBLIC_IMAGE_GENERATION_PRICE || "0.0001";
-    const receiver = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`;
+    // Change to Developer Address to receive ETH payments
+    const receiver = process.env.NEXT_PUBLIC_DEVELOPER_ADDRESS as `0x${string}`;
 
     if (!receiver) {
-      toast.error("Contract address config missing");
+      toast.error("Developer address config missing");
       return;
     }
 
@@ -931,12 +932,17 @@ function HookResult({ hook, onTryAnother, onBack, initialHistoryId }: HookResult
   }
 
   function handleDownload(url: string, filename: string) {
+    // 1. Try standard download (for Desktop)
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    // 2. Open in new tab (for Mobile/MiniApp fallback)
+    // Allows user to "Long Press to Save" if programmed download fails
+    window.open(url, '_blank');
   }
 
   return (
