@@ -171,6 +171,26 @@ body {
   animation: fade-in 0.4s ease-out forwards;
 }
 
+/* Pop In Up Animation - Dynamic Entrance */
+@keyframes pop-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.9);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-5px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-pop-in-up {
+  animation: pop-in-up 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
 /* Custom Scrollbar untuk Threads Feed */
 .overflow-y-auto::-webkit-scrollbar {
   width: 6px;
