@@ -1,30 +1,43 @@
 # Usage Flow
 
-We prioritize a frictionless user journey, moving creators from a cold start to a viral post in less than 60 seconds.
+We aim for a sub-60 second path from wallet connect to a post. We optimize for the “happy path” first.
 
-🧪 Testing
+### Happy path (what users do)
 
-#### Smart Contract Tests
+1. Connect a wallet.
+2. Pick a topic or trend (from Farcaster).
+3. Generate hook options (free).
+4. Browse hook previews (free).
+5. Reveal a full caption (**-1 credit**).
+6. Generate an image or video (**-1 credit**).
+7. Deep link to posting.
+
+New wallets start with **5 free credits**. Credits are enforced offchain (Supabase). Onchain payments are only used to buy credits.
+
+See [Credits & Payments](../mini-app-guide/credits-and-payments.md) for the exact spend rules.
+
+### Testing
+
+#### Smart contract tests
+
+{% hint style="info" %}
+Run from the repo root.
+{% endhint %}
 
 ```
-# Ensure you are in the root directory
 forge test -vvv
 ```
 
-#### Manual Testing Checklist
+#### Manual testing checklist
 
-
-
-* [ ] &#x20;Wallet connection via OnchainKit works seamlessly
-* [ ] &#x20;Topic selection correctly displays real-time Farcaster trends
-* [ ] &#x20;AI generates hooks only (no bodies visible) during selection
-* [ ] &#x20;Selecting a hook correctly deducts 1 quota from Supabase
-* [ ] &#x20;Premium users have unlimited quota verified onchain
-* [ ] &#x20;Full content is revealed only after selection is made
-* [ ] &#x20;Warpcast deep link opens the compose action correctly
-* [ ] &#x20;Subscription transaction on Base updates user status
-
-\
-\
-\
-<br>
+* [ ] Wallet connection via OnchainKit works.
+* [ ] Topic selection shows real-time Farcaster trends (via Neynar).
+* [ ] Hook generation shows **previews only** during selection.
+* [ ] Browsing previews does **not** spend credits.
+* [ ] Revealing a full caption deducts **1 credit** in Supabase.
+* [ ] Generating an image deducts **1 credit**.
+* [ ] Generating a video deducts **1 credit**.
+* [ ] When credits hit **0**, the app prompts to buy more credits.
+* [ ] Onchain credit purchase increases the user’s credit balance.
+* [ ] Failed or rejected payments do **not** deduct credits.
+* [ ] Warpcast deep link opens the compose flow correctly.
