@@ -17,7 +17,7 @@ type HooksSelectionProps = {
   onSelectHook: (hook: Hook) => void;
   onBack: () => void;
   userName: string;
-  generatedHooks : Hook[]; 
+  generatedHooks: Hook[];
 };
 
 function getInitial(name: string) {
