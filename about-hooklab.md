@@ -25,41 +25,6 @@
 
 ***
 
-### 📁 Project Structure
-
-```
-hackathon-hooklabai/
-├── src/                          # Smart contracts (Foundry)
-│   └── HookLabSubscription.sol
-├── script/
-│   └── Deploy.s.sol
-├── test/
-│   └── HookLabSubscription.t.sol
-├── frontend/                     # Next.js application
-│   ├── app/
-│   │   ├── page.tsx
-│   │   ├── layout.tsx
-│   │   ├── api/                  # Backend API routes
-│   │   │   ├── quota/
-│   │   │   ├── hooks/generate/
-│   │   │   ├── content/generate/
-│   │   │   └── premium/verify/
-│   │   └── components/
-│   │       ├── WalletConnect.tsx
-│   │       ├── TopicSelector.tsx
-│   │       ├── HookSelector.tsx
-│   │       ├── ContentReveal.tsx
-│   │       └── SubscribeButton.tsx
-│   └── lib/
-│       ├── supabase.ts
-│       ├── neynar.ts
-│       ├── ai.ts
-│       └── contract.ts
-└── README.md
-```
-
-***
-
 ### 🛠️ Tech Stack
 
 | Layer              | Technology              | Role                                                 |
