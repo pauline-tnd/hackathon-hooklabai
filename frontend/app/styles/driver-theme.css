@@ -1,0 +1,322 @@
+/* Custom Driver.js Dark Theme Styling for HookLab AI */
+/* Modern, Glassmorphism, Animated Onboarding Tour */
+
+/* Overlay - Dark to create contrast */
+.driver-overlay {
+    background: rgba(0, 0, 0, 0.85) !important;
+}
+
+/* ============================================= */
+/* CRITICAL: Force highlighted element to be FULLY VISIBLE */
+/* ============================================= */
+.driver-active-element {
+    /* Naik ke lapisan paling atas */
+    position: relative !important;
+    z-index: 10000000 !important;
+
+    /* Background SOLID agar kontras dengan overlay gelap */
+    background: #1a1a1a !important;
+
+    /* Opacity penuh - tidak ada transparansi */
+    opacity: 1 !important;
+
+    /* Border glow effect */
+    border-radius: 16px !important;
+    box-shadow:
+        0 0 0 4px rgba(59, 130, 246, 0.7),
+        0 0 50px rgba(59, 130, 246, 0.5),
+        0 0 100px rgba(59, 130, 246, 0.3) !important;
+
+    /* Smooth animation */
+    animation: highlightPulse 2s ease-in-out infinite !important;
+}
+
+/* PAKSA semua child element untuk terlihat penuh */
+.driver-active-element * {
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+}
+
+/* Animasi glow yang menarik */
+@keyframes highlightPulse {
+
+    0%,
+    100% {
+        box-shadow:
+            0 0 0 4px rgba(59, 130, 246, 0.7),
+            0 0 50px rgba(59, 130, 246, 0.5),
+            0 0 100px rgba(59, 130, 246, 0.3);
+    }
+
+    50% {
+        box-shadow:
+            0 0 0 6px rgba(59, 130, 246, 0.9),
+            0 0 70px rgba(59, 130, 246, 0.6),
+            0 0 120px rgba(59, 130, 246, 0.4);
+    }
+}
+
+/* Popover Container - Glassmorphism Dark Theme */
+.driver-popover {
+    background: linear-gradient(135deg, rgba(20, 25, 45, 0.95) 0%, rgba(10, 15, 30, 0.98) 100%) !important;
+    border: 1px solid rgba(59, 130, 246, 0.3) !important;
+    border-radius: 20px !important;
+    box-shadow:
+        0 25px 50px -12px rgba(0, 0, 0, 0.5),
+        0 0 40px rgba(59, 130, 246, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(20px);
+    padding: 24px !important;
+    animation: popoverSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-width: 340px !important;
+}
+
+@keyframes popoverSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Arrow styling */
+.driver-popover-arrow {
+    border: none !important;
+}
+
+.driver-popover-arrow-side-left,
+.driver-popover-arrow-side-right,
+.driver-popover-arrow-side-top,
+.driver-popover-arrow-side-bottom {
+    border-color: transparent !important;
+}
+
+.driver-popover-arrow-side-bottom {
+    border-bottom-color: rgba(20, 25, 45, 0.95) !important;
+}
+
+.driver-popover-arrow-side-top {
+    border-top-color: rgba(20, 25, 45, 0.95) !important;
+}
+
+.driver-popover-arrow-side-left {
+    border-left-color: rgba(20, 25, 45, 0.95) !important;
+}
+
+.driver-popover-arrow-side-right {
+    border-right-color: rgba(20, 25, 45, 0.95) !important;
+}
+
+/* Title Styling */
+.driver-popover-title {
+    font-family: 'Poppins', sans-serif !important;
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    margin-bottom: 8px !important;
+    text-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    background: linear-gradient(90deg, #ffffff 0%, #93c5fd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Description Styling */
+.driver-popover-description {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.95rem !important;
+    color: rgba(255, 255, 255, 0.75) !important;
+    line-height: 1.6 !important;
+    margin-bottom: 16px !important;
+}
+
+/* Progress Bar */
+.driver-popover-progress-text {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.75rem !important;
+    color: rgba(147, 197, 253, 0.8) !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px !important;
+}
+
+/* Footer Container */
+.driver-popover-footer {
+    display: flex !important;
+    gap: 10px !important;
+    justify-content: space-between !important;
+    margin-top: 8px !important;
+}
+
+/* Navigation Buttons - Base Style */
+.driver-popover-navigation-btns {
+    display: flex !important;
+    gap: 10px !important;
+    width: 100%;
+}
+
+.driver-popover-prev-btn,
+.driver-popover-next-btn {
+    font-family: 'Poppins', sans-serif !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    padding: 10px 20px !important;
+    border-radius: 12px !important;
+    cursor: pointer !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    flex: 1 !important;
+    text-shadow: none !important;
+}
+
+/* Previous Button - Glassmorphism Ghost */
+.driver-popover-prev-btn {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.driver-popover-prev-btn:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    color: #ffffff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1) !important;
+}
+
+.driver-popover-prev-btn:active {
+    transform: scale(0.98);
+}
+
+/* Next/Done Button - Blue Gradient Glow */
+.driver-popover-next-btn {
+    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%) !important;
+    border: none !important;
+    color: #ffffff !important;
+    box-shadow:
+        0 4px 15px rgba(59, 130, 246, 0.4),
+        0 0 20px rgba(99, 102, 241, 0.2) !important;
+}
+
+.driver-popover-next-btn:hover {
+    background: linear-gradient(135deg, #60a5fa 0%, #818cf8 100%) !important;
+    transform: translateY(-2px);
+    box-shadow:
+        0 6px 25px rgba(59, 130, 246, 0.5),
+        0 0 30px rgba(99, 102, 241, 0.3) !important;
+}
+
+.driver-popover-next-btn:active {
+    transform: scale(0.98);
+}
+
+/* Close Button */
+.driver-popover-close-btn {
+    position: absolute !important;
+    top: 12px !important;
+    right: 12px !important;
+    width: 28px !important;
+    height: 28px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+    font-size: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    padding: 0 !important;
+}
+
+.driver-popover-close-btn:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    color: #ef4444 !important;
+    transform: rotate(90deg);
+}
+
+/* Highlighted Element Border Glow */
+.driver-active-element {
+    border-radius: 12px !important;
+    box-shadow:
+        0 0 0 4px rgba(59, 130, 246, 0.4),
+        0 0 30px rgba(59, 130, 246, 0.3) !important;
+    animation: elementPulse 2s ease-in-out infinite !important;
+}
+
+@keyframes elementPulse {
+
+    0%,
+    100% {
+        box-shadow:
+            0 0 0 4px rgba(59, 130, 246, 0.4),
+            0 0 30px rgba(59, 130, 246, 0.3);
+    }
+
+    50% {
+        box-shadow:
+            0 0 0 6px rgba(59, 130, 246, 0.5),
+            0 0 50px rgba(59, 130, 246, 0.4);
+    }
+}
+
+/* Step indicator dots animation (if visible) */
+.driver-popover::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.5), transparent);
+    border-radius: 2px;
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        opacity: 0.3;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+
+    100% {
+        opacity: 0.3;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .driver-popover {
+        max-width: calc(100vw - 32px) !important;
+        margin: 16px !important;
+        padding: 20px !important;
+    }
+
+    .driver-popover-title {
+        font-size: 1.1rem !important;
+    }
+
+    .driver-popover-description {
+        font-size: 0.9rem !important;
+    }
+
+    .driver-popover-prev-btn,
+    .driver-popover-next-btn {
+        padding: 8px 16px !important;
+        font-size: 0.8rem !important;
+    }
+}
