@@ -1,5 +1,5 @@
 export async function GET() {
-  const URL = process.env.NEXT_PUBLIC_URL || 'https://hooklab.ai';
+  const URL = process.env.NEXT_PUBLIC_URL || 'https://minikit-test-hooklabai.vercel.app';
   
   const manifest = {
     "accountAssociation": {
@@ -11,8 +11,8 @@ export async function GET() {
       version: "1",
       name: "HookLab AI",
       homeUrl: URL,
-      iconUrl: `${URL}/logo_hooklab.png`,
-      splashImageUrl: `${URL}/logo_hooklab.png`,
+      iconUrl: `${URL}/minikit-logo.png`,
+      splashImageUrl: `${URL}/minikit-logo.png`,
       splashBackgroundColor: "#000000",
       webhookUrl: `${URL}/api/webhook`,
       subtitle: "Viral Hooks in Seconds",
